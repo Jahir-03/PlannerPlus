@@ -1,0 +1,223 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User Accounts
+model User {
+  id               String                   @id @default(uuid())
+  email            String                   @unique
+  passwordHash     String
+  fullName         String
+  studentId        String?                  @unique
+  phone            String?
+  college          String?
+  avatarUrl        String?
+  isActive         Boolean                  @default(true)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  memberships      OrganizationMembership[]
+  assignedTasks    Task[]                   @relation("TaskAssignee")
+  createdTasks     Task[]                   @relation("TaskCreator")
+  approvals        ApprovalStep[]           @relation("ApproverUser")
+  meetingAttendees MeetingAttendee[]
+  auditLogs        AuditLog[]
+}
+
+// Organizations (20 Clubs & 13 Core Domains)
+model Organization {
+  id          String                   @id @default(uuid())
+  name        String                   @unique
+  code        String                   @unique
+  type        String                   // CLUB or CORE_DOMAIN
+  description String?
+  logoUrl     String?
+  isActive    Boolean                  @default(true)
+  createdAt   DateTime                 @default(now())
+  memberships OrganizationMembership[]
+  leadEvents  Event[]                  @relation("LeadOrganization")
+  tasks       Task[]
+  budgets     Budget[]
+  resources   Resource[]
+}
+
+// User Organization Memberships with Scoped Roles
+model OrganizationMembership {
+  id             String       @id @default(uuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           String       // DIRECTOR, DY_DIRECTOR, ADMIN_STAFF, CULTURAL_SECRETARY, CLUB_SECRETARY, CLUB_CONVENOR, CLUB_MEMBER, DOMAIN_SECRETARY, DOMAIN_CONVENOR, COMMITTEE_HEAD, COMMITTEE_MEMBER, VOLUNTEER
+  title          String?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+}
+
+// Event Projects
+model Event {
+  id                   String                @id @default(uuid())
+  title                String
+  slug                 String                @unique
+  description          String
+  leadOrganizationId   String
+  leadOrganization     Organization          @relation("LeadOrganization", fields: [leadOrganizationId], references: [id])
+  collaboratorOrgIds   String                @default("[]") // JSON Array string
+  venue                String
+  startDate            DateTime
+  endDate              DateTime
+  status               String                @default("DRAFT") // DRAFT, PLANNING, PENDING_APPROVAL, APPROVED, PREPARATION, EXECUTION, COMPLETED, POST_REVIEW, ARCHIVED
+  expectedParticipants Int                   @default(0)
+  budget               Budget?
+  tasks                Task[]
+  approvals            ApprovalWorkflow[]
+  reservations         ResourceReservation[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+}
+
+// Tasks
+model Task {
+  id             String        @id @default(uuid())
+  title          String
+  description    String?
+  status         String        @default("TODO") // BACKLOG, TODO, IN_PROGRESS, BLOCKED, REVIEW, COMPLETED, CANCELLED
+  priority       String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  creatorId      String
+  creator        User          @relation("TaskCreator", fields: [creatorId], references: [id])
+  assigneeId     String?
+  assignee       User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  eventId        String?
+  event          Event?        @relation(fields: [eventId], references: [id])
+  deadline       DateTime?
+  estimatedHours Float?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  comments       TaskComment[]
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  userFullName String @default("User")
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// Approval Workflows
+model ApprovalWorkflow {
+  id          String         @id @default(uuid())
+  requestType String         // EVENT_PROPOSAL, BUDGET_REQUEST, RESOURCE_RESERVATION, TRANSPORT_REQUEST, ACCOMMODATION_REQUEST, SPONSORSHIP_APPROVAL, CERTIFICATE_RELEASE
+  title       String
+  eventId     String?
+  event       Event?         @relation(fields: [eventId], references: [id])
+  requesterId String
+  requesterName String
+  status      String         @default("SUBMITTED") // SUBMITTED, PENDING, APPROVED, REJECTED, RETURNED_FOR_MODIFICATION, CANCELLED
+  createdAt   DateTime       @default(now())
+  steps       ApprovalStep[]
+}
+
+model ApprovalStep {
+  id         String           @id @default(uuid())
+  workflowId String
+  workflow   ApprovalWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepOrder  Int
+  roleTarget String           // Required role for approval
+  approverId String?
+  approver   User?            @relation("ApproverUser", fields: [approverId], references: [id])
+  status     String           @default("PENDING") // PENDING, APPROVED, REJECTED
+  comments   String?
+  updatedAt  DateTime         @updatedAt
+}
+
+// Budgets & Expenses
+model Budget {
+  id             String        @id @default(uuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  eventId        String?       @unique
+  event          Event?        @relation(fields: [eventId], references: [id])
+  allocated      Float         @default(0.0)
+  spent          Float         @default(0.0)
+  committed      Float         @default(0.0)
+  expenses       ExpenseItem[]
+}
+
+model ExpenseItem {
+  id          String   @id @default(uuid())
+  budgetId    String
+  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  title       String
+  amount      Float
+  category    String   @default("GENERAL")
+  receiptUrl  String?
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+// Resources & Reservations
+model Resource {
+  id             String                @id @default(uuid())
+  name           String
+  category       String                // Equipment, Venue, Audio, Camera, Furniture
+  totalQuantity  Int                   @default(1)
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id])
+  reservations   ResourceReservation[]
+}
+
+model ResourceReservation {
+  id         String   @id @default(uuid())
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id])
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id])
+  quantity   Int      @default(1)
+  startTime  DateTime
+  endTime    DateTime
+  status     String   @default("CONFIRMED")
+}
+
+// Meetings
+model Meeting {
+  id          String            @id @default(uuid())
+  title       String
+  agenda      String
+  meetingDate DateTime
+  location    String
+  minutes     String?
+  attendees   MeetingAttendee[]
+  createdAt   DateTime          @default(now())
+}
+
+model MeetingAttendee {
+  id        String   @id @default(uuid())
+  meetingId String
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  attended  Boolean  @default(false)
+}
+
+// Audit Logs
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  action       String
+  entity       String
+  entityId     String
+  details      String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+}
