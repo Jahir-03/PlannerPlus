@@ -26,6 +26,7 @@ model User {
   approvals        ApprovalStep[]           @relation("ApproverUser")
   meetingAttendees MeetingAttendee[]
   auditLogs        AuditLog[]
+  refreshSessions  RefreshSession[]
 }
 
 // Organizations (20 Clubs & 13 Core Domains)
@@ -221,3 +222,17 @@ model AuditLog {
   ipAddress    String?
   createdAt    DateTime @default(now())
 }
+
+// Refresh Sessions
+model RefreshSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  deviceInfo String?
+  ipAddress  String?
+  createdAt DateTime @default(now())
+}
+

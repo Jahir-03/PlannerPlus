@@ -1,7 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import { env } from './config/env.js';
 
 import authRoutes from './routes/auth.routes.js';
 import orgsRoutes from './routes/orgs.routes.js';
@@ -10,15 +11,18 @@ import eventsRoutes from './routes/events.routes.js';
 import approvalsRoutes from './routes/approvals.routes.js';
 import resourcesRoutes from './routes/resources.routes.js';
 import aiRoutes from './routes/ai.routes.js';
-
-dotenv.config();
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
+app.use(helmet());
+app.use(cors({
+  origin: env.CORS_ORIGIN,
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
+app.use('/api', apiLimiter);
 
 // API Health check
 app.get('/health', (req, res) => {
@@ -40,6 +44,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`⚡ DSA Ecosystem API Server running on port ${PORT}`);
+app.listen(env.PORT, () => {
+  console.log(`⚡ DSA Ecosystem API Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
 });

@@ -5,6 +5,8 @@ import { prisma } from '../config/prisma.js';
 import { generateTokens, verifyRefreshToken } from '../config/jwt.js';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 import { logAuditEvent } from '../utils/auditLogger.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -22,7 +24,18 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
-router.post('/register', async (req, res) => {
+// Helper to set cookie securely
+const setRefreshCookie = (res: any, token: string) => {
+  res.cookie('refreshToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+};
+
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const data = registerSchema.parse(req.body);
 
@@ -53,6 +66,18 @@ router.post('/register', async (req, res) => {
       fullName: user.fullName,
     });
 
+    // Save refresh session
+    const hashedRefreshToken = crypto.createHash('sha256').update(tokens.refreshToken).digest('hex');
+    await prisma.refreshSession.create({
+      data: {
+        userId: user.id,
+        token: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ipAddress: req.ip,
+        deviceInfo: req.headers['user-agent'],
+      }
+    });
+
     await logAuditEvent({
       userId: user.id,
       action: 'USER_REGISTERED',
@@ -62,6 +87,8 @@ router.post('/register', async (req, res) => {
       ipAddress: req.ip,
     });
 
+    setRefreshCookie(res, tokens.refreshToken);
+
     return res.status(201).json({
       user: {
         id: user.id,
@@ -70,7 +97,7 @@ router.post('/register', async (req, res) => {
         studentId: user.studentId,
         college: user.college,
       },
-      ...tokens,
+      accessToken: tokens.accessToken,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -80,7 +107,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
 
@@ -109,6 +136,18 @@ router.post('/login', async (req, res) => {
       fullName: user.fullName,
     });
 
+    // Save refresh session
+    const hashedRefreshToken = crypto.createHash('sha256').update(tokens.refreshToken).digest('hex');
+    await prisma.refreshSession.create({
+      data: {
+        userId: user.id,
+        token: hashedRefreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        ipAddress: req.ip,
+        deviceInfo: req.headers['user-agent'],
+      }
+    });
+
     await logAuditEvent({
       userId: user.id,
       action: 'USER_LOGIN',
@@ -117,6 +156,8 @@ router.post('/login', async (req, res) => {
       details: `Successful login for ${user.email}`,
       ipAddress: req.ip,
     });
+
+    setRefreshCookie(res, tokens.refreshToken);
 
     return res.json({
       user: {
@@ -134,7 +175,7 @@ router.post('/login', async (req, res) => {
           title: m.title,
         })),
       },
-      ...tokens,
+      accessToken: tokens.accessToken,
     });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
@@ -142,6 +183,31 @@ router.post('/login', async (req, res) => {
     }
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
+});
+
+router.post('/logout', authenticateJWT, async (req: AuthenticatedRequest, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  
+  if (refreshToken) {
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    await prisma.refreshSession.updateMany({
+      where: { token: hashedRefreshToken, userId: req.user!.userId },
+      data: { revokedAt: new Date() }
+    });
+  }
+
+  res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+  
+  await logAuditEvent({
+    userId: req.user!.userId,
+    action: 'USER_LOGOUT',
+    entity: 'User',
+    entityId: req.user!.userId,
+    details: `User logged out`,
+    ipAddress: req.ip,
+  });
+
+  return res.json({ message: 'Logged out successfully' });
 });
 
 router.get('/me', authenticateJWT, async (req: AuthenticatedRequest, res) => {
@@ -186,22 +252,69 @@ router.get('/me', authenticateJWT, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post('/refresh', (req, res) => {
-  const { refreshToken } = req.body;
+router.post('/refresh', async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
 
   if (!refreshToken) {
-    return res.status(400).json({ error: 'Refresh token is required' });
+    return res.status(401).json({ error: 'Refresh token is required' });
   }
 
   try {
     const payload = verifyRefreshToken(refreshToken);
-    const tokens = generateTokens({
+    const hashedRefreshToken = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    const session = await prisma.refreshSession.findUnique({
+      where: { token: hashedRefreshToken }
+    });
+
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid refresh session' });
+    }
+
+    if (session.revokedAt || session.expiresAt < new Date()) {
+      // Token reuse detected or expired token
+      if (session.revokedAt) {
+         // Potential theft, revoke all active sessions for this user
+         await prisma.refreshSession.updateMany({
+           where: { userId: payload.userId, revokedAt: null },
+           data: { revokedAt: new Date() }
+         });
+      }
+      res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
+      return res.status(401).json({ error: 'Session expired or revoked' });
+    }
+
+    // Rotate refresh token
+    const newTokens = generateTokens({
       userId: payload.userId,
       email: payload.email,
       fullName: payload.fullName,
     });
-    return res.json(tokens);
+
+    const newHashedRefreshToken = crypto.createHash('sha256').update(newTokens.refreshToken).digest('hex');
+
+    // Revoke old token and issue new one
+    await prisma.$transaction([
+      prisma.refreshSession.update({
+        where: { id: session.id },
+        data: { revokedAt: new Date() }
+      }),
+      prisma.refreshSession.create({
+        data: {
+          userId: payload.userId,
+          token: newHashedRefreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          ipAddress: req.ip,
+          deviceInfo: req.headers['user-agent'],
+        }
+      })
+    ]);
+
+    setRefreshCookie(res, newTokens.refreshToken);
+
+    return res.json({ accessToken: newTokens.accessToken });
   } catch (error) {
+    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
     return res.status(401).json({ error: 'Invalid or expired refresh token' });
   }
 });

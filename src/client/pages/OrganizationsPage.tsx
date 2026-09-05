@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Users, CheckSquare, Sparkles, Compass } from 'lucide-react';
+import { fetchApi } from '../utils/api';
+import { Building2, Users, CheckSquare } from 'lucide-react';
 
 export const OrganizationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'ALL' | 'CLUB' | 'CORE_DOMAIN'>('ALL');
 
-  const { data: orgs = [], isLoading } = useQuery({
+  const { data: rawOrgs = [], isLoading } = useQuery({
     queryKey: ['orgs'],
-    queryFn: async () => {
-      const res = await fetch('/api/orgs', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}` },
-      });
-      return res.json();
-    },
+    queryFn: () => fetchApi('/api/orgs'),
   });
+
+  const orgs = Array.isArray(rawOrgs) ? rawOrgs : [];
 
   const filteredOrgs = orgs.filter((o: any) => {
     if (activeTab === 'ALL') return true;

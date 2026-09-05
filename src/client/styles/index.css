@@ -6,22 +6,23 @@
   --color-burgundy: #900c3f;
   --color-emerald: #0f5236;
   --color-navy-dark: #0b0518;
-  --color-navy-card: rgba(25, 12, 45, 0.7);
-  --color-navy-border: rgba(212, 175, 55, 0.2);
+  --color-navy-card: rgba(25, 12, 45, 0.85);
+  --color-navy-border: rgba(212, 175, 55, 0.25);
 }
 
 body {
   margin: 0;
   background-color: var(--color-navy-dark);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(144, 12, 63, 0.25) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(15, 82, 54, 0.2) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(144, 12, 63, 0.3) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(15, 82, 54, 0.25) 0px, transparent 50%);
   color: #f1f5f9;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
 }
 
 h1, h2, h3, .font-heading {
-  font-family: 'Cinzel', serif;
+  font-family: 'Outfit', 'Cinzel', serif;
   letter-spacing: 0.02em;
 }
 
@@ -31,7 +32,7 @@ h1, h2, h3, .font-heading {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-navy-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
   border-radius: 12px;
 }
 
@@ -42,7 +43,7 @@ h1, h2, h3, .font-heading {
 .glass-card-hover:hover {
   transform: translateY(-2px);
   border-color: var(--color-gold);
-  box-shadow: 0 12px 36px 0 rgba(212, 175, 55, 0.15);
+  box-shadow: 0 12px 36px 0 rgba(212, 175, 55, 0.2);
 }
 
 /* Gold Gradient Text */

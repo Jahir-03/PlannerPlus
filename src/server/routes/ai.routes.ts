@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/auth.js';
 import { prisma } from '../config/prisma.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
 
 const router = Router();
 
 // AI Meeting Summarizer Endpoint
-router.post('/summarize-meeting', authenticateJWT, async (req: AuthenticatedRequest, res) => {
+router.post('/summarize-meeting', authenticateJWT, aiLimiter, async (req: AuthenticatedRequest, res) => {
   const { title, rawNotes } = req.body;
 
   if (!rawNotes) {
@@ -32,7 +33,7 @@ router.post('/summarize-meeting', authenticateJWT, async (req: AuthenticatedRequ
 });
 
 // AI Event Risk Detector Endpoint
-router.get('/event-risk/:eventId', authenticateJWT, async (req: AuthenticatedRequest, res) => {
+router.get('/event-risk/:eventId', authenticateJWT, aiLimiter, async (req: AuthenticatedRequest, res) => {
   const { eventId } = req.params;
 
   try {
@@ -92,7 +93,7 @@ router.get('/event-risk/:eventId', authenticateJWT, async (req: AuthenticatedReq
 });
 
 // Permission-Aware DSA Assistant Q&A Endpoint
-router.post('/assistant', authenticateJWT, async (req: AuthenticatedRequest, res) => {
+router.post('/assistant', authenticateJWT, aiLimiter, async (req: AuthenticatedRequest, res) => {
   const { query } = req.body;
   const userId = req.user!.userId;
 

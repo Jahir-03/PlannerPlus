@@ -1,50 +1,36 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { fetchApi } from '../utils/api';
 import { Building2, CheckSquare, Calendar, FileCheck, Shield, Sparkles, TrendingUp } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const { user, activeMembership } = useAuth();
 
-  const { data: orgs = [] } = useQuery({
+  const { data: rawOrgs = [] } = useQuery({
     queryKey: ['orgs'],
-    queryFn: async () => {
-      const res = await fetch('/api/orgs', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}` },
-      });
-      return res.json();
-    },
+    queryFn: () => fetchApi('/api/orgs'),
   });
 
-  const { data: tasks = [] } = useQuery({
+  const { data: rawTasks = [] } = useQuery({
     queryKey: ['tasks'],
-    queryFn: async () => {
-      const res = await fetch('/api/tasks', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}` },
-      });
-      return res.json();
-    },
+    queryFn: () => fetchApi('/api/tasks'),
   });
 
-  const { data: events = [] } = useQuery({
+  const { data: rawEvents = [] } = useQuery({
     queryKey: ['events'],
-    queryFn: async () => {
-      const res = await fetch('/api/events', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}` },
-      });
-      return res.json();
-    },
+    queryFn: () => fetchApi('/api/events'),
   });
 
-  const { data: approvals = [] } = useQuery({
+  const { data: rawApprovals = [] } = useQuery({
     queryKey: ['approvals'],
-    queryFn: async () => {
-      const res = await fetch('/api/approvals', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}` },
-      });
-      return res.json();
-    },
+    queryFn: () => fetchApi('/api/approvals'),
   });
+
+  const orgs = Array.isArray(rawOrgs) ? rawOrgs : [];
+  const tasks = Array.isArray(rawTasks) ? rawTasks : [];
+  const events = Array.isArray(rawEvents) ? rawEvents : [];
+  const approvals = Array.isArray(rawApprovals) ? rawApprovals : [];
 
   const clubs = orgs.filter((o: any) => o.type === 'CLUB');
   const domains = orgs.filter((o: any) => o.type === 'CORE_DOMAIN');
@@ -59,10 +45,10 @@ export const DashboardPage: React.FC = () => {
         <div className="space-y-2 max-w-2xl">
           <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
             <Shield className="w-3.5 h-3.5" />
-            <span>Active Role: {activeMembership?.role.replace(/_/g, ' ') || 'MEMBER'}</span>
+            <span>Active Role: {activeMembership?.role ? activeMembership.role.replace(/_/g, ' ') : 'MEMBER'}</span>
           </div>
           <h2 className="text-3xl font-bold font-heading gold-gradient-text">
-            Welcome, {user?.fullName}
+            Welcome, {user?.fullName || 'DSA Delegate'}
           </h2>
           <p className="text-slate-300 text-sm leading-relaxed">
             DSA Operations Platform for managing <strong>20 Cultural Clubs</strong>, <strong>13 Core Administrative Domains</strong>, multi-stage approval workflows, and cross-functional event taskforces.
@@ -127,22 +113,26 @@ export const DashboardPage: React.FC = () => {
           </h3>
 
           <div className="space-y-3">
-            {user?.memberships.map((m) => (
-              <div
-                key={m.orgId}
-                className="p-3 bg-slate-900/80 border border-amber-500/20 rounded-lg flex items-center justify-between"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-amber-300">{m.orgName}</div>
-                  <div className="text-xs text-slate-400 font-mono">
-                    {m.orgType === 'CLUB' ? 'Cultural Club' : 'Core Administrative Domain'}
+            {!user?.memberships || user.memberships.length === 0 ? (
+              <div className="text-xs text-slate-400 p-2">No active organizational memberships.</div>
+            ) : (
+              user.memberships.map((m) => (
+                <div
+                  key={m.orgId}
+                  className="p-3 bg-slate-900/80 border border-amber-500/20 rounded-lg flex items-center justify-between"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-amber-300">{m.orgName}</div>
+                    <div className="text-xs text-slate-400 font-mono">
+                      {m.orgType === 'CLUB' ? 'Cultural Club' : 'Core Administrative Domain'}
+                    </div>
+                  </div>
+                  <div className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[11px]">
+                    {m.role ? m.role.replace(/_/g, ' ') : 'MEMBER'}
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[11px]">
-                  {m.role.replace(/_/g, ' ')}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -165,7 +155,7 @@ export const DashboardPage: React.FC = () => {
                   <div>
                     <h4 className="text-sm font-bold text-slate-100">{ev.title}</h4>
                     <p className="text-xs text-slate-400 font-mono">
-                      Lead Org: {ev.leadOrganization?.name} • Venue: {ev.venue}
+                      Lead Org: {ev.leadOrganization?.name || 'DSA'} • Venue: {ev.venue}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">

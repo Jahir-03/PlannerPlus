@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
+import { env } from './env.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dsa_ecosystem_super_secret_jwt_key_2026_milan';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dsa_ecosystem_refresh_secret_key_2026_milan';
+const JWT_SECRET = env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || env.JWT_SECRET; // fallback to JWT_SECRET if not provided but require in env later or just use JWT_SECRET
 
 export interface TokenPayload {
   userId: string;
