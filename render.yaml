@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: plannerplus
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run deploy:setup && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
