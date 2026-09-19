@@ -3,7 +3,7 @@ services:
     name: plannerplus
     runtime: node
     plan: free
-    buildCommand: npm install && npm run deploy:setup && npm run build
+    buildCommand: npm install --include=dev && npm run deploy:setup && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV

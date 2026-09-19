@@ -71,7 +71,7 @@ npm test
 3. Click **New +** $\rightarrow$ **Web Service** and connect `Jahir-03/PlannerPlus`.
 4. Configure the service:
    - **Environment**: `Node`
-   - **Build Command**: `npm install && npm run deploy:setup && npm run build`
+   - **Build Command**: `npm install --include=dev && npm run deploy:setup && npm run build`
    - **Start Command**: `npm start`
 5. Add Environment Variables:
    - `DATABASE_URL`: `file:./dev.db`
