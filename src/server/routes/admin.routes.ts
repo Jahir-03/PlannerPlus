@@ -581,7 +581,7 @@ router.get('/events', async (req: AuthenticatedRequest, res) => {
             type: true,
           },
         },
-        approvalWorkflows: {
+        approvals: {
           include: {
             steps: true,
           },
