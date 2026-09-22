@@ -53,11 +53,26 @@ router.get('/:idOrCode', authenticateJWT, async (req, res) => {
           },
         },
         tasks: {
-          take: 10,
+          include: {
+            assignee: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+            creator: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
           orderBy: { createdAt: 'desc' },
         },
         leadEvents: {
-          take: 5,
+          take: 10,
           orderBy: { startDate: 'asc' },
         },
         budgets: true,

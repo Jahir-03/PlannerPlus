@@ -11,6 +11,8 @@ import eventsRoutes from './routes/events.routes.js';
 import approvalsRoutes from './routes/approvals.routes.js';
 import resourcesRoutes from './routes/resources.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import logsRoutes from './routes/logs.routes.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
 import path from 'path';
@@ -45,6 +47,8 @@ app.use('/api/events', eventsRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/resources', resourcesRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/logs', logsRoutes);
 
 // Serve Frontend SPA in production / when built
 const clientDistPath = path.resolve(process.cwd(), 'dist/client');

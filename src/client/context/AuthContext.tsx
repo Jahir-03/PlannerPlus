@@ -20,6 +20,24 @@ export interface User {
   memberships: UserMembership[];
 }
 
+export const GLOBAL_SUPERUSER_SCOPE: UserMembership = {
+  orgId: 'GLOBAL_ADMIN',
+  orgName: 'Directorate of Student Affairs (Omni-Scope)',
+  orgCode: 'DSA_OMNI',
+  orgType: 'CORE_DOMAIN',
+  role: 'DIRECTOR',
+  title: 'System Administrator (All Roles & Full Access)',
+};
+
+export function isUserSuperAdmin(u: User | null): boolean {
+  if (!u) return false;
+  return (
+    u.email === 'admin@srmist.edu.in' ||
+    u.studentId === 'admin' ||
+    u.memberships?.some((m) => ['DIRECTOR', 'DY_DIRECTOR', 'ADMIN_STAFF'].includes(m.role))
+  );
+}
+
 interface AuthContextType {
   user: User | null;
   accessToken: string | null;
@@ -28,6 +46,9 @@ interface AuthContextType {
   login: (userData: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   isLoading: boolean;
+  isSuperUser: boolean;
+  isGlobalAdminScope: boolean;
+  availableScopes: UserMembership[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,24 +56,62 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [activeMembership, setActiveMembership] = useState<UserMembership | null>(null);
+  const [activeMembership, setActiveMembershipState] = useState<UserMembership | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isSuperUser = isUserSuperAdmin(user);
+
+  // Compute all available scopes for this user (with Global Scope for Superuser)
+  const availableScopes: UserMembership[] = React.useMemo(() => {
+    const list: UserMembership[] = [];
+    if (isSuperUser) {
+      list.push(GLOBAL_SUPERUSER_SCOPE);
+    }
+    if (user?.memberships) {
+      user.memberships.forEach((m) => {
+        if (!list.some((existing) => existing.orgId === m.orgId)) {
+          list.push(m);
+        }
+      });
+    }
+    return list;
+  }, [user, isSuperUser]);
+
+  const setActiveMembership = (membership: UserMembership | null) => {
+    setActiveMembershipState(membership);
+    if (membership) {
+      localStorage.setItem('dsa_active_scope', JSON.stringify(membership));
+    } else {
+      localStorage.removeItem('dsa_active_scope');
+    }
+  };
 
   useEffect(() => {
     const savedToken = localStorage.getItem('dsa_access_token');
     const savedUser = localStorage.getItem('dsa_user_data');
+    const savedScope = localStorage.getItem('dsa_active_scope');
 
     if (savedToken && savedUser) {
       try {
         const parsedUser: User = JSON.parse(savedUser);
         setUser(parsedUser);
         setAccessToken(savedToken);
-        if (parsedUser.memberships && parsedUser.memberships.length > 0) {
-          setActiveMembership(parsedUser.memberships[0]);
+
+        const isSuper = isUserSuperAdmin(parsedUser);
+
+        if (savedScope) {
+          try {
+            setActiveMembershipState(JSON.parse(savedScope));
+          } catch {
+            setActiveMembershipState(isSuper ? GLOBAL_SUPERUSER_SCOPE : parsedUser.memberships?.[0] || null);
+          }
+        } else {
+          setActiveMembershipState(isSuper ? GLOBAL_SUPERUSER_SCOPE : parsedUser.memberships?.[0] || null);
         }
       } catch (e) {
         localStorage.removeItem('dsa_access_token');
         localStorage.removeItem('dsa_user_data');
+        localStorage.removeItem('dsa_active_scope');
       }
     }
     setIsLoading(false);
@@ -65,9 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('dsa_refresh_token', refreshToken);
     localStorage.setItem('dsa_user_data', JSON.stringify(userData));
 
-    if (userData.memberships && userData.memberships.length > 0) {
-      setActiveMembership(userData.memberships[0]);
-    }
+    const isSuper = isUserSuperAdmin(userData);
+    const initialScope = isSuper ? GLOBAL_SUPERUSER_SCOPE : userData.memberships?.[0] || null;
+    setActiveMembership(initialScope);
   };
 
   const logout = () => {
@@ -77,7 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('dsa_access_token');
     localStorage.removeItem('dsa_refresh_token');
     localStorage.removeItem('dsa_user_data');
+    localStorage.removeItem('dsa_active_scope');
   };
+
+  const isGlobalAdminScope = isSuperUser && (activeMembership?.orgId === 'GLOBAL_ADMIN' || !activeMembership);
 
   return (
     <AuthContext.Provider
@@ -89,6 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         isLoading,
+        isSuperUser,
+        isGlobalAdminScope,
+        availableScopes,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bot, Sparkles, Send, ShieldAlert, FileText } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bot, Sparkles, Send, ShieldAlert, FileText, CheckCircle2 } from 'lucide-react';
 
 export const AiAssistantPage: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -15,6 +16,8 @@ export const AiAssistantPage: React.FC = () => {
   const [rawNotes, setRawNotes] = useState('');
   const [summaryResult, setSummaryResult] = useState<any>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isSavingLog, setIsSavingLog] = useState(false);
+  const [savedLogId, setSavedLogId] = useState<string | null>(null);
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +63,7 @@ export const AiAssistantPage: React.FC = () => {
 
       const data = await res.json();
       setSummaryResult(data);
+      setSavedLogId(null);
     } catch (error) {
       console.error(error);
     } finally {
@@ -67,18 +71,47 @@ export const AiAssistantPage: React.FC = () => {
     }
   };
 
+  const handleSaveMeetingLog = async () => {
+    if (!summaryResult) return;
+    setIsSavingLog(true);
+    try {
+      const res = await fetch('/api/logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('dsa_access_token')}`,
+        },
+        body: JSON.stringify({
+          type: 'MEETING',
+          title: summaryResult.meetingTitle || 'AI Extracted Operational Meeting Minutes',
+          summary: rawNotes,
+          keyDecisions: summaryResult.extractedActionItems?.join('\n') || 'Decisions extracted by AI Assistant.',
+          location: 'Campus Council Room / Virtual Sync',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSavedLogId(data.id);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSavingLog(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left Column: Permission-Aware Q&A Chat */}
-      <div className="glass-panel p-6 border-amber-500/20 flex flex-col justify-between h-[calc(100vh-8rem)]">
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col justify-between h-[calc(100vh-8rem)]">
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-          <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
-            <Bot className="w-5 h-5 text-amber-400" />
+          <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+            <Bot className="w-5 h-5 text-slate-700" />
             <div>
-              <h3 className="font-bold font-heading gold-gradient-text text-base">
+              <h3 className="font-bold font-heading text-slate-900 text-base">
                 DSA Permission-Aware AI Assistant
               </h3>
-              <p className="text-[11px] text-slate-400 font-mono">
+              <p className="text-[11px] text-slate-500 font-mono">
                 Contextual queries powered by your active organizational scope
               </p>
             </div>
@@ -93,8 +126,8 @@ export const AiAssistantPage: React.FC = () => {
                 <div
                   className={`max-w-[80%] p-3 rounded-xl text-xs whitespace-pre-wrap leading-relaxed ${
                     msg.sender === 'user'
-                      ? 'bg-amber-500 text-slate-950 font-semibold'
-                      : 'bg-slate-900 border border-amber-500/20 text-slate-200'
+                      ? 'bg-slate-900 text-white font-medium'
+                      : 'bg-slate-50 border border-slate-200 text-slate-800'
                   }`}
                 >
                   {msg.text}
@@ -102,25 +135,25 @@ export const AiAssistantPage: React.FC = () => {
               </div>
             ))}
             {isLoading && (
-              <div className="text-xs text-amber-400 font-mono animate-pulse">
+              <div className="text-xs text-slate-500 font-mono animate-pulse">
                 AI Assistant is searching authorization scope...
               </div>
             )}
           </div>
         </div>
 
-        <form onSubmit={handleSendChat} className="flex items-center space-x-2 pt-4 border-t border-slate-800">
+        <form onSubmit={handleSendChat} className="flex items-center space-x-2 pt-4 border-t border-slate-100">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask: 'Show my pending tasks' or 'What events are tomorrow?'"
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-400"
+            className="flex-1 bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900"
           />
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-amber-500 hover:bg-amber-400 text-slate-950 p-2.5 rounded-lg transition-all"
+            className="bg-slate-900 hover:bg-slate-800 text-white p-2.5 rounded-lg transition-colors disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -128,14 +161,14 @@ export const AiAssistantPage: React.FC = () => {
       </div>
 
       {/* Right Column: AI Meeting Summarizer */}
-      <div className="glass-panel p-6 border-amber-500/20 space-y-4">
-        <div className="flex items-center space-x-2 border-b border-slate-800 pb-3">
-          <FileText className="w-5 h-5 text-amber-400" />
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
+          <FileText className="w-5 h-5 text-slate-700" />
           <div>
-            <h3 className="font-bold font-heading gold-gradient-text text-base">
+            <h3 className="font-bold font-heading text-slate-900 text-base">
               AI Meeting Summarizer
             </h3>
-            <p className="text-[11px] text-slate-400 font-mono">
+            <p className="text-[11px] text-slate-500 font-mono">
               Auto-extract key decisions & action items from raw meeting notes
             </p>
           </div>
@@ -146,36 +179,57 @@ export const AiAssistantPage: React.FC = () => {
             rows={6}
             value={rawNotes}
             onChange={(e) => setRawNotes(e.target.value)}
-            placeholder="Paste raw meeting notes here...\n\nExample:\n- Agreed to book TP Ganesan Hall on Feb 19\n- Action item: Assign Music Convenor to finalize band amplifiers\n- Todo: Request publicity banner clearance from Cultural Secretary"
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-100 focus:outline-none focus:border-amber-400 font-mono"
+            placeholder="Paste raw meeting notes here...&#10;&#10;Example:&#10;- Agreed to book TP Ganesan Hall on Feb 19&#10;- Action item: Assign Music Convenor to finalize band amplifiers&#10;- Todo: Request publicity banner clearance from Cultural Secretary"
+            className="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 font-mono"
           />
 
           <button
             onClick={handleSummarizeMeeting}
             disabled={isSummarizing || !rawNotes.trim()}
-            className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-2.5 rounded-lg text-xs transition-all flex items-center justify-center space-x-2"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg text-xs transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 text-amber-400" />
             <span>{isSummarizing ? 'Analyzing Notes...' : 'Summarize & Extract Action Items'}</span>
           </button>
         </div>
 
         {summaryResult && (
-          <div className="p-4 bg-slate-900/90 border border-amber-500/30 rounded-lg space-y-3 text-xs">
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-amber-300 font-heading text-sm">Extracted Action Items</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+              <span className="font-bold text-slate-900 font-heading text-sm">Extracted Action Items</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 font-medium">
                 Risk: {summaryResult.riskLevel}
               </span>
             </div>
 
             <div className="space-y-1">
               {summaryResult.extractedActionItems?.map((item: string, idx: number) => (
-                <div key={idx} className="flex items-start space-x-2 text-slate-200 font-mono">
-                  <span className="text-amber-400">•</span>
+                <div key={idx} className="flex items-start space-x-2 text-slate-700 font-mono">
+                  <span className="text-slate-400">•</span>
                   <span>{item}</span>
                 </div>
               ))}
+            </div>
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+              {savedLogId ? (
+                <Link
+                  to="/logs"
+                  className="text-emerald-700 text-xs font-semibold flex items-center space-x-1.5 hover:underline"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Saved to Archive! Open Log & Discussions &rarr;</span>
+                </Link>
+              ) : (
+                <button
+                  onClick={handleSaveMeetingLog}
+                  disabled={isSavingLog}
+                  className="bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition-colors shadow-xs"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{isSavingLog ? 'Saving to Archive...' : 'Save to Meeting Logs Archive'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}

@@ -7,11 +7,13 @@ import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
+import { OrganizationDetailPage } from './pages/OrganizationDetailPage';
 import { TasksPage } from './pages/TasksPage';
 import { EventsPage } from './pages/EventsPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { AiAssistantPage } from './pages/AiAssistantPage';
+import { AdminPage } from './pages/AdminPage';
 
 // React Error Boundary Class
 interface ErrorBoundaryProps {
@@ -47,15 +49,15 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-4">
-          <div className="p-4 bg-rose-950/40 border border-rose-500/30 rounded-xl max-w-lg space-y-3">
-            <h2 className="text-xl font-bold text-rose-400">DSA Portal Exception Caught</h2>
-            <p className="text-xs text-slate-300 font-mono">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <div className="p-6 bg-white border border-rose-200 rounded-xl shadow-sm max-w-lg space-y-3">
+            <h2 className="text-lg font-bold text-rose-600">DSA Portal Notice</h2>
+            <p className="text-xs text-slate-600 font-mono">
               {this.state.error?.message || 'An unexpected rendering error occurred.'}
             </p>
             <button
               onClick={this.handleReset}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs transition-colors"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg text-xs transition-colors"
             >
               Sign Out & Clear Session Cache
             </button>
@@ -82,7 +84,7 @@ const ProtectedLayout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-amber-400 font-mono text-xs">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600 font-medium text-xs">
         Loading DSA Ecosystem Context...
       </div>
     );
@@ -93,7 +95,7 @@ const ProtectedLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       <Navbar />
       <div className="flex flex-1">
         <Sidebar />
@@ -101,11 +103,17 @@ const ProtectedLayout: React.FC = () => {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/orgs" element={<OrganizationsPage />} />
+            <Route path="/orgs/clubs" element={<OrganizationsPage defaultWindow="clubs" />} />
+            <Route path="/orgs/domains" element={<OrganizationsPage defaultWindow="domains" />} />
+            <Route path="/orgs/:id" element={<OrganizationDetailPage />} />
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/logs" element={<Navigate to="/orgs" replace />} />
+            <Route path="/events/logs" element={<Navigate to="/orgs" replace />} />
             <Route path="/approvals" element={<ApprovalsPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/ai-assistant" element={<AiAssistantPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

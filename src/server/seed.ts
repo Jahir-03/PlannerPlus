@@ -74,6 +74,24 @@ export async function main() {
 
   // 2. Create Initial Core Users
   const passwordHash = await bcrypt.hash('alohomora2026', 10);
+  const adminPasswordHash = await bcrypt.hash('admin123', 10);
+
+  // Superuser Admin
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@srmist.edu.in' },
+    update: {
+      passwordHash: adminPasswordHash,
+      studentId: 'admin',
+      fullName: 'System Administrator',
+    },
+    create: {
+      email: 'admin@srmist.edu.in',
+      passwordHash: adminPasswordHash,
+      fullName: 'System Administrator',
+      studentId: 'admin',
+      college: 'DSA Central Administration',
+    },
+  });
 
   const director = await prisma.user.upsert({
     where: { email: 'director.dsa@srmist.edu.in' },
@@ -115,6 +133,22 @@ export async function main() {
   const musicClub = await prisma.organization.findUnique({ where: { code: 'CLUB_MUSIC' } });
   const socialMediaDomain = await prisma.organization.findUnique({ where: { code: 'DOMAIN_SOCIAL_MEDIA' } });
   const opsDomain = await prisma.organization.findUnique({ where: { code: 'DOMAIN_OPERATIONS_RESOURCES' } });
+
+  // Link Admin to Operations Domain and Music Club as Superuser DIRECTOR
+  if (opsDomain) {
+    await prisma.organizationMembership.upsert({
+      where: { userId_organizationId: { userId: admin.id, organizationId: opsDomain.id } },
+      update: { role: 'DIRECTOR', title: 'Super Administrator' },
+      create: { userId: admin.id, organizationId: opsDomain.id, role: 'DIRECTOR', title: 'Super Administrator' },
+    });
+  }
+  if (musicClub) {
+    await prisma.organizationMembership.upsert({
+      where: { userId_organizationId: { userId: admin.id, organizationId: musicClub.id } },
+      update: { role: 'DIRECTOR', title: 'Super Administrator' },
+      create: { userId: admin.id, organizationId: musicClub.id, role: 'DIRECTOR', title: 'Super Administrator' },
+    });
+  }
 
   // 3. Create Multi-Role Memberships
   if (musicClub) {
@@ -208,6 +242,65 @@ export async function main() {
         organizationId: opsDomain.id,
       },
     });
+
+    // 6. Seed Initial Event & Meeting Logs with Discussion Comments
+    const existingLogsCount = await prisma.eventMeetingLog.count();
+    if (existingLogsCount === 0) {
+      await prisma.eventMeetingLog.create({
+        data: {
+          type: 'MEETING',
+          title: 'Milan 2026 Core Taskforce Coordination Sync',
+          summary: 'Met with Convenors of Music, Dance, Stage Operations, and Discipline domains. Finalized the run-of-show schedule, green room allotment, and approved VIP hospitality passes.',
+          date: new Date('2026-02-10T16:00:00Z'),
+          location: 'DSA Council Conference Room (Tech Park 4th Floor)',
+          attendees: 'Cultural Secretary, Music Convenor, Discipline Head, Ops Head (14 attendees)',
+          keyDecisions: '1. Line array speakers must be rigged by Feb 18 6 PM.\n2. Volunteer passes will be QR-coded.\n3. Rehearsal slots allocated 45 mins per band.',
+          authorName: 'Dr. R. Nandakumar',
+          authorRole: 'Director DSA',
+          organizationId: opsDomain?.id,
+          eventId: event?.id,
+          comments: {
+            create: [
+              {
+                authorName: 'Aravind K',
+                authorRole: 'Music Convenor',
+                content: 'We have confirmed the drumkit specifications with the guest artist management team.',
+              },
+              {
+                authorName: 'Dr. R. Nandakumar',
+                authorRole: 'Director DSA',
+                content: 'Excellent. Please ensure the electrical earth grounding inspection is completed prior to the sound check.',
+              },
+            ],
+          },
+        },
+      });
+
+      await prisma.eventMeetingLog.create({
+        data: {
+          type: 'EVENT',
+          title: 'Tarangini Cultural Festival - Day 1 Grand Inauguration',
+          summary: 'Successfully executed the opening night with 4,200 attendees. Classical fusion ensemble performed on the main stage, followed by inter-department choreography competition.',
+          date: new Date('2026-02-05T19:30:00Z'),
+          location: 'TP Ganesan Main Auditorium',
+          attendees: '4,200+ Students & Faculty Guests',
+          keyDecisions: 'Stage transition time between performances averaged 4.2 minutes. Crowd control at Gate 2 functioned smoothly with security barcode scanning.',
+          authorName: 'System Administrator',
+          authorRole: 'Director',
+          organizationId: musicClub?.id,
+          eventId: event?.id,
+          comments: {
+            create: [
+              {
+                authorName: 'Priya Sharma',
+                authorRole: 'Cultural Secretary',
+                content: 'The lighting queue timing on the finale dance was spot on. Commendations to the tech domain!',
+              },
+            ],
+          },
+        },
+      });
+    }
   }
 
   console.log('✨ DSA Ecosystem Seeding Complete!');

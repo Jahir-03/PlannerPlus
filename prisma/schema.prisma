@@ -44,6 +44,7 @@ model Organization {
   tasks       Task[]
   budgets     Budget[]
   resources   Resource[]
+  eventLogs   EventMeetingLog[]
 }
 
 // User Organization Memberships with Scoped Roles
@@ -78,6 +79,7 @@ model Event {
   tasks                Task[]
   approvals            ApprovalWorkflow[]
   reservations         ResourceReservation[]
+  logs                 EventMeetingLog[]
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 }
@@ -234,5 +236,39 @@ model RefreshSession {
   deviceInfo String?
   ipAddress  String?
   createdAt DateTime @default(now())
+}
+
+// Event & Meeting Logs (Permanent record of events, meetings, minutes, and operational milestones)
+model EventMeetingLog {
+  id             String        @id @default(uuid())
+  type           String        @default("EVENT") // EVENT, MEETING, MILESTONE, BRIEFING
+  title          String
+  summary        String        // Detailed minutes / report
+  date           DateTime      @default(now())
+  location       String?       // Venue or room
+  attendees      String?       // Attendees list or count
+  keyDecisions   String?       // Key decisions and action items
+  authorId       String?
+  authorName     String        @default("DSA Administrator")
+  authorRole     String?       @default("Coordinator")
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  eventId        String?
+  event          Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  comments       LogComment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// Comments & Discussions on Event/Meeting Logs
+model LogComment {
+  id         String          @id @default(uuid())
+  logId      String
+  log        EventMeetingLog @relation(fields: [logId], references: [id], onDelete: Cascade)
+  userId     String?
+  authorName String          @default("DSA Member")
+  authorRole String?         @default("Member")
+  content    String
+  createdAt  DateTime        @default(now())
 }
 
