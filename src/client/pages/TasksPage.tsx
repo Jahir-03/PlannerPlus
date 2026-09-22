@@ -11,6 +11,7 @@ export const TasksPage: React.FC = () => {
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [mobileActiveColumn, setMobileActiveColumn] = useState<string>('ALL');
 
   // Form state
   const [title, setTitle] = useState('');
@@ -135,11 +136,39 @@ export const TasksPage: React.FC = () => {
         </button>
       </div>
 
+      {/* Mobile Column Filter Pills */}
+      <div className="flex md:hidden items-center space-x-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+        <button
+          onClick={() => setMobileActiveColumn('ALL')}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+            mobileActiveColumn === 'ALL'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          All ({tasks.length})
+        </button>
+        {TASK_STATUSES.map((st) => (
+          <button
+            key={st}
+            onClick={() => setMobileActiveColumn(st)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+              mobileActiveColumn === st
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {st.replace('_', ' ')} ({tasks.filter((t: any) => t.status === st).length})
+          </button>
+        ))}
+      </div>
+
       {/* Kanban Columns */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
         {TASK_STATUSES.map((status) => {
           const statusTasks = tasks.filter((t: any) => t.status === status);
           const isOver = dragOverColumn === status;
+          const isHiddenOnMobile = mobileActiveColumn !== 'ALL' && mobileActiveColumn !== status;
 
           return (
             <div
@@ -166,6 +195,8 @@ export const TasksPage: React.FC = () => {
                 setDragOverColumn(null);
               }}
               className={`rounded-xl p-3 space-y-3 min-w-[240px] transition-all ${
+                isHiddenOnMobile ? 'hidden md:block' : 'block'
+              } ${
                 isOver
                   ? 'bg-slate-200/90 border-2 border-dashed border-slate-400 ring-2 ring-slate-400/20'
                   : 'bg-slate-100/90 border border-slate-200'

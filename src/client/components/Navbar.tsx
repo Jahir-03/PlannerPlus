@@ -1,9 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, LogOut, Building2, ShieldCheck } from 'lucide-react';
+import { Sparkles, LogOut, Building2, ShieldCheck, Menu, X } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onToggleMobileMenu?: () => void;
+  isMobileMenuOpen?: boolean;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onToggleMobileMenu, isMobileMenuOpen = false }) => {
   const {
     user,
     activeMembership,
@@ -15,23 +20,25 @@ export const Navbar: React.FC = () => {
   } = useAuth();
 
   return (
-    <header className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between sticky top-0 z-40">
+    <header className="h-16 border-b border-slate-200 bg-white px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40">
       {/* Brand Header */}
-      <div className="flex items-center space-x-3">
-        <div className="w-9 h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-        </div>
-        <div>
-          <h1 className="text-base font-bold font-heading text-slate-900 tracking-tight leading-tight">
-            DSA ECOSYSTEM
-          </h1>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
-            Directorate of Student Affairs
-          </p>
-        </div>
+      <div className="flex items-center space-x-2.5 sm:space-x-3">
+        <Link to="/" className="flex items-center space-x-2.5 sm:space-x-3 hover:opacity-90 transition-opacity">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs shrink-0">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+          </div>
+          <div>
+            <h1 className="text-sm sm:text-base font-bold font-heading text-slate-900 tracking-tight leading-tight">
+              DSA ECOSYSTEM
+            </h1>
+            <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-wider font-medium truncate max-w-[140px] sm:max-w-none">
+              Directorate of Student Affairs
+            </p>
+          </div>
+        </Link>
       </div>
 
-      {/* Center Org Scope Switcher for Superuser & Multi-Role Users */}
+      {/* Center Org Scope Switcher for Superuser & Multi-Role Users (Desktop) */}
       {user && availableScopes.length > 0 && (
         <div
           className={`hidden md:flex items-center space-x-2 rounded-full px-3 py-1 text-xs border transition-colors ${
@@ -69,7 +76,7 @@ export const Navbar: React.FC = () => {
       )}
 
       {/* User Actions */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-4">
         {isSuperUser && (
           <Link
             to="/admin"
@@ -79,8 +86,9 @@ export const Navbar: React.FC = () => {
             <span>Admin Console</span>
           </Link>
         )}
+
         {user ? (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="text-right hidden sm:block">
               <div className="text-xs font-semibold text-slate-800">{user.fullName}</div>
               <div className="text-[10px] font-mono uppercase">
@@ -92,17 +100,33 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs">
+            <div
+              className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-800 font-bold text-xs shrink-0 cursor-pointer"
+              title={`${user.fullName} (${isGlobalAdminScope ? 'OMNI' : activeMembership?.role || 'MEMBER'})`}
+              onClick={onToggleMobileMenu}
+            >
               {user.fullName.charAt(0)}
             </div>
 
+            {/* Desktop Logout Button */}
             <button
               onClick={logout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              className="hidden md:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
             </button>
+
+            {/* Mobile Hamburger Menu Toggle Button */}
+            {onToggleMobileMenu && (
+              <button
+                onClick={onToggleMobileMenu}
+                className="md:hidden p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                aria-label={isMobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
+              >
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            )}
           </div>
         ) : (
           <span className="text-xs text-slate-500 font-mono">Not Authenticated</span>

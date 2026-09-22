@@ -92,17 +92,17 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ defaultWin
           </div>
 
           {/* Large Window Switcher Bar */}
-          <div className="inline-flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 self-start md:self-auto shadow-xs">
+          <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 self-stretch sm:self-start md:self-auto shadow-xs overflow-x-auto max-w-full">
             <button
               onClick={() => setWindow('clubs')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeWindow === 'clubs'
                   ? 'bg-white text-blue-700 shadow-xs border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-blue-600" />
-              <span>Cultural Clubs Window</span>
+              <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Clubs <span className="hidden sm:inline">Window</span></span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 {allClubs.length}
               </span>
@@ -110,14 +110,14 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ defaultWin
 
             <button
               onClick={() => setWindow('domains')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeWindow === 'domains'
                   ? 'bg-white text-purple-700 shadow-xs border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Shield className="w-4 h-4 text-purple-600" />
-              <span>Core Domains Window</span>
+              <Shield className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Domains <span className="hidden sm:inline">Window</span></span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
                 {allDomains.length}
               </span>
@@ -125,15 +125,16 @@ export const OrganizationsPage: React.FC<OrganizationsPageProps> = ({ defaultWin
 
             <button
               onClick={() => setWindow('split')}
-              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                 activeWindow === 'split'
                   ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
               title="View both windows side by side"
             >
-              <Columns className="w-4 h-4 text-slate-600" />
+              <Columns className="w-4 h-4 text-slate-600 shrink-0" />
               <span className="hidden sm:inline">Split Dual View</span>
+              <span className="sm:hidden">Dual</span>
             </button>
           </div>
         </div>

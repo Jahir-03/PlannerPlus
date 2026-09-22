@@ -1,9 +1,11 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { MobileNavDrawer } from './components/MobileNavDrawer';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { OrganizationsPage } from './pages/OrganizationsPage';
@@ -81,6 +83,7 @@ const queryClient = new QueryClient({
 
 const ProtectedLayout: React.FC = () => {
   const { user, isLoading } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -95,11 +98,21 @@ const ProtectedLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      <Navbar />
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col relative">
+      <Navbar
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
+
+      {/* Slide-out Mobile Navigation Drawer */}
+      <MobileNavDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
+
       <div className="flex flex-1">
         <Sidebar />
-        <main className="flex-1 p-6 overflow-y-auto max-w-7xl">
+        <main className="flex-1 p-3.5 sm:p-6 pb-24 md:pb-6 overflow-y-auto max-w-7xl w-full">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/orgs" element={<OrganizationsPage />} />
@@ -118,6 +131,12 @@ const ProtectedLayout: React.FC = () => {
           </Routes>
         </main>
       </div>
+
+      {/* Fixed Thumb-Friendly Mobile Bottom Navigation Bar */}
+      <MobileBottomNav
+        onOpenMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        isMenuOpen={isMobileMenuOpen}
+      />
     </div>
   );
 };
